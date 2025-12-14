@@ -20,58 +20,85 @@
 <button onclick="start()" style="padding:15px;width:90%">تسجيل</button>
 
 <p id="status"></p>
-  
-<script>
-const OFFICE_LAT = 36.235097068414;
-const OFFICE_LNG = 43.99670666959595;
-const ALLOWED_RADIUS = 1000;
 
+<script>
+// ===== إعدادات موقع الدوام =====
+const OFFICE_LAT = 36.234905532743525;
+const OFFICE_LNG = 43.99674391239932;
+const ALLOWED_RADIUS = 300; // متر (واسع للاختبار)
+
+// ===== رابط Google Apps Script (مثبّت) =====
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMen6kkdRssGezbkm9B3HeJyb_14PURb3QuXX3TLL4XVZWc1onx4o1HS9iqYINuztDoA/exec";
 
+// ===== دالة حساب المسافة =====
 function distance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLon = (lon2-lon1)*Math.PI/180;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
-    Math.sin(dLat/2)**2 +
-    Math.cos(lat1*Math.PI/180) *
-    Math.cos(lat2*Math.PI/180) *
-    Math.sin(dLon/2)**2;
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ===== بدء عملية التسجيل =====
 function start() {
   document.getElementById("status").innerText = "📍 جاري تحديد الموقع...";
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const acc = pos.coords.accuracy; // دقة GPS بالمتر
 
-    if (distance(lat, lng, OFFICE_LAT, OFFICE_LNG) > ALLOWED_RADIUS) {
-      document.getElementById("status").innerText = "🚨 خارج نطاق الموقع";
-      return;
+      console.log("LAT:", lat, "LNG:", lng, "ACC:", acc);
+
+      // إذا دقة الموقع ضعيفة
+      if (acc > 200) {
+        document.getElementById("status").innerText =
+          "📡 إشارة GPS ضعيفة، انتظر قليلاً وحاول مرة ثانية";
+        return;
+      }
+
+      // حساب المسافة من موقع الدوام
+      const d = distance(lat, lng, OFFICE_LAT, OFFICE_LNG);
+
+      if (d > ALLOWED_RADIUS) {
+        document.getElementById("status").innerText = "🚨 خارج نطاق الموقع";
+        return;
+      }
+
+      // إرسال البيانات إلى Google Sheets
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          name: document.getElementById("name").value,
+          type: document.getElementById("type").value,
+          lat: lat,
+          lng: lng,
+          accuracy: acc
+        })
+      }).then(() => {
+        document.getElementById("status").innerText = "✅ تم التسجيل بنجاح";
+      }).catch(() => {
+        document.getElementById("status").innerText = "❌ خطأ في الإرسال";
+      });
+    },
+    err => {
+      document.getElementById("status").innerText =
+        "❌ لم يتم الحصول على الموقع، فعّل GPS";
+      console.error(err);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
     }
-
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      body: JSON.stringify({
-        name: document.getElementById("name").value,
-        type: document.getElementById("type").value,
-        lat: lat,
-        lng: lng
-      })
-    }).then(() => {
-      document.getElementById("status").innerText = "✅ تم التسجيل بنجاح";
-    });
-
-  }, () => {
-    alert("يجب السماح بالوصول إلى الموقع");
-  }, { enableHighAccuracy: true });
+  );
 }
 </script>
 
 </body>
 </html>
-
-
-
