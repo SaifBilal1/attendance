@@ -10,7 +10,10 @@
 
 <h2>تسجيل الدخول / الخروج</h2>
 
-<input id="name" placeholder="الاسم الكامل" style="width:90%;padding:12px"><br><br>
+<select id="name" style="width:90%;padding:12px">
+  <option value="">⏳ جاري تحميل الأسماء...</option>
+</select>
+<br><br>
 
 <select id="type" style="width:90%;padding:12px">
   <option value="دخول">دخول</option>
@@ -22,13 +25,31 @@
 <p id="status"></p>
 
 <script>
+// ===== رابط Google Apps Script (الجديد) =====
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzpu1ZH9XM9qR9-bWep1YyYBikfXA3YcaPsfkiZpwSgd_Ul_S3xruaecEUAcR50TtHHkA/exec";
+
 // ===== إعدادات موقع الدوام =====
 const OFFICE_LAT = 36.234905532743525;
 const OFFICE_LNG = 43.99674391239932;
-const ALLOWED_RADIUS = 300; // متر (واسع للاختبار)
+const ALLOWED_RADIUS = 300; // متر
 
-// ===== رابط Google Apps Script (مثبّت) =====
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMen6kkdRssGezbkm9B3HeJyb_14PURb3QuXX3TLL4XVZWc1onx4o1HS9iqYINuztDoA/exec";
+// ===== تحميل الأسماء من Google Sheet =====
+fetch(SCRIPT_URL)
+  .then(res => res.json())
+  .then(names => {
+    const select = document.getElementById("name");
+    select.innerHTML = '<option value="">-- اختر اسمك --</option>';
+    names.forEach(n => {
+      const opt = document.createElement("option");
+      opt.value = n;
+      opt.textContent = n;
+      select.appendChild(opt);
+    });
+  })
+  .catch(() => {
+    document.getElementById("name").innerHTML =
+      '<option value="">❌ فشل تحميل الأسماء</option>';
+  });
 
 // ===== دالة حساب المسافة =====
 function distance(lat1, lon1, lat2, lon2) {
@@ -43,36 +64,37 @@ function distance(lat1, lon1, lat2, lon2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ===== بدء عملية التسجيل =====
+// ===== تسجيل الدخول / الخروج =====
 function start() {
+  if (!document.getElementById("name").value) {
+    document.getElementById("status").innerText = "✏️ يرجى اختيار الاسم";
+    return;
+  }
+
   document.getElementById("status").innerText = "📍 جاري تحديد الموقع...";
 
   navigator.geolocation.getCurrentPosition(
     pos => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-      const acc = pos.coords.accuracy; // دقة GPS بالمتر
+      const acc = pos.coords.accuracy;
 
-      console.log("LAT:", lat, "LNG:", lng, "ACC:", acc);
-
-      // إذا دقة الموقع ضعيفة
       if (acc > 200) {
         document.getElementById("status").innerText =
-          "📡 إشارة GPS ضعيفة، انتظر قليلاً وحاول مرة ثانية";
+          "📡 إشارة GPS ضعيفة، انتظر قليلاً";
         return;
       }
 
-      // حساب المسافة من موقع الدوام
-      const d = distance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-
-      if (d > ALLOWED_RADIUS) {
+      if (distance(lat, lng, OFFICE_LAT, OFFICE_LNG) > ALLOWED_RADIUS) {
         document.getElementById("status").innerText = "🚨 خارج نطاق الموقع";
         return;
       }
 
-      // إرسال البيانات إلى Google Sheets
       fetch(SCRIPT_URL, {
         method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
         body: JSON.stringify({
           name: document.getElementById("name").value,
           type: document.getElementById("type").value,
@@ -80,16 +102,17 @@ function start() {
           lng: lng,
           accuracy: acc
         })
-      }).then(() => {
+      })
+      .then(() => {
         document.getElementById("status").innerText = "✅ تم التسجيل بنجاح";
-      }).catch(() => {
+      })
+      .catch(() => {
         document.getElementById("status").innerText = "❌ خطأ في الإرسال";
       });
     },
-    err => {
+    () => {
       document.getElementById("status").innerText =
         "❌ لم يتم الحصول على الموقع، فعّل GPS";
-      console.error(err);
     },
     {
       enableHighAccuracy: true,
