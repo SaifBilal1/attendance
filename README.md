@@ -1,1 +1,74 @@
-index.html
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدوام</title>
+</head>
+
+<body style="font-family:Arial;text-align:center;padding:20px">
+
+<h2>تسجيل الدخول / الخروج</h2>
+
+<input id="name" placeholder="الاسم الكامل" style="width:90%;padding:12px"><br><br>
+
+<select id="type" style="width:90%;padding:12px">
+  <option value="دخول">دخول</option>
+  <option value="خروج">خروج</option>
+</select><br><br>
+
+<button onclick="start()" style="padding:15px;width:90%">تسجيل</button>
+
+<p id="status"></p>
+
+<script>
+const OFFICE_LAT = 36.234905532743525;
+const OFFICE_LNG = 43.99674391239932;
+const ALLOWED_RADIUS = 100;
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwMen6kkdRssGezbkm9B3HeJyb_14PURb3QuXX3TLL4XVZWc1onx4o1HS9iqYINuztDoA/exec";
+
+function distance(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLon = (lon2-lon1)*Math.PI/180;
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) *
+    Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function start() {
+  document.getElementById("status").innerText = "📍 جاري تحديد الموقع...";
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    if (distance(lat, lng, OFFICE_LAT, OFFICE_LNG) > ALLOWED_RADIUS) {
+      document.getElementById("status").innerText = "🚨 خارج نطاق الموقع";
+      return;
+    }
+
+    fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        name: document.getElementById("name").value,
+        type: document.getElementById("type").value,
+        lat: lat,
+        lng: lng
+      })
+    }).then(() => {
+      document.getElementById("status").innerText = "✅ تم التسجيل بنجاح";
+    });
+
+  }, () => {
+    alert("يجب السماح بالوصول إلى الموقع");
+  }, { enableHighAccuracy: true });
+}
+</script>
+
+</body>
+</html>
