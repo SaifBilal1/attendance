@@ -34,17 +34,30 @@ const OFFICE_LNG = 43.99674391239932;
 const ALLOWED_RADIUS = 300; // متر
 
 // ===== تحميل الأسماء من Google Sheet =====
-fetch(SCRIPT_URL)
-  .then(res => res.json())
-  .then(names => {
-    const select = document.getElementById("name");
-    select.innerHTML = '<option value="">-- اختر اسمك --</option>';
-    names.forEach(n => {
-      const opt = document.createElement("option");
-      opt.value = n;
-      opt.textContent = n;
-      select.appendChild(opt);
-    });
+fetch(SCRIPT_URL, {
+  method: "POST",
+  headers: {
+    "Content-Type": "text/plain;charset=utf-8"
+  },
+  body: JSON.stringify({
+    name: document.getElementById("name").value,
+    type: document.getElementById("type").value,
+    lat: lat,
+    lng: lng,
+    accuracy: acc
+  })
+})
+.then(res => res.json())
+.then(res => {
+  if (res.status === "ok") {
+    document.getElementById("status").innerText = "✅ تم التسجيل بنجاح";
+  } else {
+    document.getElementById("status").innerText = "❌ " + res.message;
+  }
+})
+.catch(() => {
+  document.getElementById("status").innerText = "❌ خطأ في الإرسال";
+});
   })
   .catch(() => {
     document.getElementById("name").innerHTML =
@@ -125,5 +138,6 @@ function start() {
 
 </body>
 </html>
+
 
 
