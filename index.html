@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html>
 <body>
-
-<button onclick="test()">اختبار الاتصال</button>
+body: JSON.stringify({
+  action: "login",
+  username: "test",
+  password: "123",
+  deviceId: "TEST-DEVICE"
+})
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlTMsHmccY1uNyeQqMTQbvajBBlpvg1wl3ztnBwhAAhDpAB1hL8vJaMq_kJUKsSJiPRw/exec";
@@ -30,3 +34,4 @@ function test() {
 
 </body>
 </html>
+
