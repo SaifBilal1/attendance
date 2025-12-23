@@ -10,6 +10,7 @@
 
 <h2>نظام تسجيل الدوام</h2>
 
+<!-- ===== LOGIN ===== -->
 <div id="loginBox">
   <input id="username" placeholder="اسم المستخدم" style="width:90%;padding:12px"><br><br>
   <input id="password" type="password" placeholder="كلمة المرور" style="width:90%;padding:12px"><br><br>
@@ -17,8 +18,9 @@
   <p id="loginStatus"></p>
 </div>
 
+<!-- ===== ATTENDANCE ===== -->
 <div id="attendanceBox" style="display:none">
-  <h3 id="welcome"></h3>
+  <h3>مرحباً</h3>
 
   <select id="type" style="width:90%;padding:12px">
     <option value="دخول">دخول</option>
@@ -33,7 +35,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxJ_UbWM-yOMuizJwQzfW42M_i20GJC9YvNMS7tfTsaUBRJTj0XGyAO6d_eCUef3yCqTg/exec";
+const SCRIPT_URL = "ضع_هنا_رابط_exec";
 
 /* ===== موقع الدوام ===== */
 const OFFICE_LAT = 36.234905532743525;
@@ -78,10 +80,9 @@ function login() {
   .then(r => r.json())
   .then(res => {
     if (res.status === "ok") {
-      localStorage.setItem("employeeName", res.name);
+      localStorage.setItem("username", res.username);
       loginBox.style.display = "none";
       attendanceBox.style.display = "block";
-      welcome.innerText = "مرحباً " + res.name;
     } else {
       loginStatus.innerText = "❌ " + res.message;
     }
@@ -90,6 +91,13 @@ function login() {
 
 /* ===== ATTENDANCE ===== */
 function startAttendance() {
+  const usernameStored = localStorage.getItem("username");
+  if (!usernameStored) {
+    alert("انتهت الجلسة، أعد تسجيل الدخول");
+    location.reload();
+    return;
+  }
+
   navigator.geolocation.getCurrentPosition(pos => {
     const d = distance(
       pos.coords.latitude,
@@ -108,7 +116,7 @@ function startAttendance() {
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
         action: "attendance",
-        name: localStorage.getItem("employeeName"),
+        username: usernameStored,
         type: type.value,
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
