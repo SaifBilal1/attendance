@@ -42,7 +42,7 @@
 
 <script>
 /* ===== رابط Google Apps Script ===== */
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfbKpdlA5-AXOTyxpaAhRNfr4m7U6o2KqlM7pbRzBociSuRtvKMnI0OZD2dd_goFkAzg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfbKpdlA5-AXOTyxpaAhRNfr4m7U6o2KqlM7pbRzBociSuRtvKMnI0OZD2dd_goFkAzg/exechttps://script.google.com/macros/s/AKfycbzfbKpdlA5-AXOTyxpaAhRNfr4m7U6o2KqlM7pbRzBociSuRtvKMnI0OZD2dd_goFkAzg/exec";
 
 /* ===== موقع الدوام ===== */
 const OFFICE_LAT = 36.234905532743525;
@@ -117,13 +117,21 @@ function startAttendance() {
   status.innerText = "📍 جاري تحديد الموقع...";
 
   navigator.geolocation.getCurrentPosition(
+    /* ===== SUCCESS ===== */
     pos => {
-      const d = distance(
-        pos.coords.latitude,
-        pos.coords.longitude,
-        OFFICE_LAT,
-        OFFICE_LNG
-      );
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      const acc = pos.coords.accuracy;
+
+      console.log("GPS:", lat, lng, acc);
+
+      if (acc > 200) {
+        status.innerText =
+          "📡 إشارة GPS ضعيفة، انتظر قليلاً وحاول مرة أخرى";
+        return;
+      }
+
+      const d = distance(lat, lng, OFFICE_LAT, OFFICE_LNG);
 
       if (d > ALLOWED_RADIUS) {
         status.innerText = "🚨 خارج نطاق الموقع";
@@ -139,16 +147,14 @@ function startAttendance() {
           action: "attendance",
           username: user,
           type: type.value,
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy
+          lat: lat,
+          lng: lng,
+          accuracy: acc
         })
       })
-      .then(r => r.text())
-      .then(txt => {
-        console.log("ATTENDANCE RESPONSE:", txt);
-        const res = JSON.parse(txt);
-
+      .then(r => r.json())
+      .then(res => {
+        console.log("ATTENDANCE RESPONSE:", res);
         status.innerText =
           res.status === "ok"
             ? "✅ تم تسجيل " + type.value
@@ -156,14 +162,28 @@ function startAttendance() {
       })
       .catch(err => {
         console.error(err);
-        status.innerText = "❌ خطأ اتصال";
+        status.innerText = "❌ فشل الاتصال بالسيرفر";
       });
     },
+
+    /* ===== ERROR ===== */
     err => {
-      console.error(err);
-      status.innerText = "❌ فشل تحديد الموقع";
+      console.error("GPS ERROR:", err);
+
+      let msg = "❌ فشل تحديد الموقع";
+      if (err.code === 1) msg = "❌ تم رفض إذن الموقع";
+      if (err.code === 2) msg = "❌ لا يمكن تحديد الموقع";
+      if (err.code === 3) msg = "⏰ انتهى وقت تحديد الموقع";
+
+      status.innerText = msg;
     },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+
+    /* ===== OPTIONS ===== */
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
   );
 }
 </script>
