@@ -10,7 +10,6 @@
 
 <h2>نظام تسجيل الدوام</h2>
 
-<!-- ===== LOGIN ===== -->
 <div id="loginBox">
   <input id="username" placeholder="اسم المستخدم" style="width:90%;padding:12px"><br><br>
   <input id="password" type="password" placeholder="كلمة المرور" style="width:90%;padding:12px"><br><br>
@@ -18,10 +17,7 @@
   <p id="loginStatus"></p>
 </div>
 
-<!-- ===== ATTENDANCE ===== -->
 <div id="attendanceBox" style="display:none">
-  <h3>مرحباً</h3>
-
   <select id="type" style="width:90%;padding:12px">
     <option value="دخول">دخول</option>
     <option value="خروج">خروج</option>
@@ -35,14 +31,14 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbySOa4Xe5veuHch7xmM0dWRDFWivSgVTno045lF0qAAY9gl_Pf5ND8YQVrkbE0C2i0tOg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw89FG4vM-6WBxpcqvwZrQe0xWAGsvjuc3iipOjV4ZT8Nn5eZhkbSIl9CQ12haLyV5ZJw/exec";
 
-/* ===== موقع الدوام ===== */
+/* موقع الدوام */
 const OFFICE_LAT = 36.234905532743525;
 const OFFICE_LNG = 43.99674391239932;
 const ALLOWED_RADIUS = 300;
 
-/* ===== Device ID ===== */
+/* Device ID */
 function getDeviceId() {
   let id = localStorage.getItem("device_id");
   if (!id) {
@@ -52,7 +48,7 @@ function getDeviceId() {
   return id;
 }
 
-/* ===== حساب المسافة ===== */
+/* حساب المسافة */
 function distance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const dLat = (lat2-lat1)*Math.PI/180;
@@ -65,8 +61,10 @@ function distance(lat1, lon1, lat2, lon2) {
   return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-/* ===== LOGIN ===== */
+/* LOGIN */
 function login() {
+  loginStatus.innerText = "جاري التحقق...";
+
   fetch(SCRIPT_URL, {
     method: "POST",
     headers: { "Content-Type": "text/plain;charset=utf-8" },
@@ -86,57 +84,71 @@ function login() {
     } else {
       loginStatus.innerText = "❌ " + res.message;
     }
+  })
+  .catch(() => {
+    loginStatus.innerText = "❌ خطأ اتصال";
   });
 }
 
-/* ===== ATTENDANCE ===== */
+/* ATTENDANCE */
 function startAttendance() {
-  const usernameStored = localStorage.getItem("username");
-  if (!usernameStored) {
-    alert("انتهت الجلسة، أعد تسجيل الدخول");
+  const user = localStorage.getItem("username");
+  if (!user) {
+    alert("انتهت الجلسة");
     location.reload();
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    const d = distance(
-      pos.coords.latitude,
-      pos.coords.longitude,
-      OFFICE_LAT,
-      OFFICE_LNG
-    );
+  status.innerText = "📍 جاري تحديد الموقع...";
 
-    if (d > ALLOWED_RADIUS) {
-      status.innerText = "🚨 خارج نطاق الموقع";
-      return;
-    }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const d = distance(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        OFFICE_LAT,
+        OFFICE_LNG
+      );
 
-    fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({
-        action: "attendance",
-        username: usernameStored,
-        type: type.value,
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-        accuracy: pos.coords.accuracy
+      if (d > ALLOWED_RADIUS) {
+        status.innerText = "🚨 خارج نطاق الموقع";
+        return;
+      }
+
+      status.innerText = "⏳ جاري الإرسال...";
+
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "attendance",
+          username: user,
+          type: type.value,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        })
       })
-    })
-    .then(r => r.json())
-    .then(res => {
-      status.innerText =
-        res.status === "ok"
-          ? "✅ تم التسجيل"
-          : "❌ " + res.message;
-    });
-
-  }, () => {
-    status.innerText = "❌ فعّل GPS";
-  });
+      .then(r => r.text())
+      .then(txt => {
+        console.log("SERVER:", txt);
+        const res = JSON.parse(txt);
+        status.innerText =
+          res.status === "ok"
+            ? "✅ تم التسجيل"
+            : "❌ " + res.message;
+      })
+      .catch(() => {
+        status.innerText = "❌ خطأ اتصال";
+      });
+    },
+    () => {
+      status.innerText = "❌ فعّل GPS";
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+  );
 }
 </script>
 
 </body>
 </html>
-
