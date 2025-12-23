@@ -1,37 +1,47 @@
 <!DOCTYPE html>
-<html>
-<body>
-body: JSON.stringify({
-  action: "login",
-  username: "test",
-  password: "123",
-  deviceId: "TEST-DEVICE"
-})
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>اختبار الاتصال</title>
+</head>
+
+<body style="font-family:Arial;text-align:center;padding:40px">
+
+<h2>اختبار GitHub ⇄ Google Script</h2>
+
+<button onclick="test()" style="padding:20px;font-size:18px">
+  اختبار الاتصال
+</button>
+
+<pre id="result" style="margin-top:30px;text-align:left"></pre>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlTMsHmccY1uNyeQqMTQbvajBBlpvg1wl3ztnBwhAAhDpAB1hL8vJaMq_kJUKsSJiPRw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwV0loDb152ZRGBwk8YMjQcFyA0A77qGihV4u4q3pklhum6PVNNuLMbrVq2FRjY_rOpiw/exec";
 
 function test() {
-  alert("بدأ الإرسال");
+  result.textContent = "⏳ جاري الإرسال...";
 
   fetch(SCRIPT_URL, {
     method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({
-      action: "test"
+      action: "login",
+      username: "test",
+      password: "123",
+      deviceId: "TEST-DEVICE"
     })
   })
   .then(r => r.text())
-  .then(t => {
-    alert("رد السيرفر:\n" + t);
-    console.log(t);
+  .then(txt => {
+    console.log("SERVER RESPONSE:", txt);
+    result.textContent = txt;
   })
-  .catch(e => {
-    alert("خطأ");
-    console.error(e);
+  .catch(err => {
+    console.error(err);
+    result.textContent = "❌ خطأ اتصال";
   });
 }
 </script>
 
 </body>
 </html>
-
