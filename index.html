@@ -23,12 +23,12 @@
     تسجيل الدخول
   </button>
 
-  <p id="loginStatus"></p>
+  <p id="loginStatus" style="font-weight:bold;"></p>
 </div>
 
 <!-- ================= ATTENDANCE ================= -->
 <div id="attendanceBox" style="display:none">
-  <p id="welcome"></p>
+  <p id="welcome" style="font-weight:bold;"></p>
 
   <select id="type" style="width:90%;padding:12px">
     <option value="دخول">دخول</option>
@@ -39,7 +39,9 @@
     تسجيل البصمة
   </button>
 
-  <p id="status"></p>
+  <!-- 👇 هذا هو العنصر المهم -->
+  <p id="status"
+     style="margin-top:15px;font-weight:bold;color:green;"></p>
 </div>
 
 <script>
@@ -48,6 +50,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9MvTZW-T5umqTLyJIa
 
 /* ================= LOGIN ================= */
 function login() {
+  const loginStatus = document.getElementById("loginStatus");
   loginStatus.innerText = "⏳ جاري التحقق...";
 
   fetch(SCRIPT_URL, {
@@ -55,8 +58,8 @@ function login() {
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     body: JSON.stringify({
       action: "login",
-      username: username.value,
-      password: password.value
+      username: document.getElementById("username").value,
+      password: document.getElementById("password").value
     })
   })
   .then(r => r.json())
@@ -64,10 +67,11 @@ function login() {
     if (res.status === "ok") {
       localStorage.setItem("username", res.username);
 
-      loginBox.style.display = "none";
-      attendanceBox.style.display = "block";
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("attendanceBox").style.display = "block";
 
-      welcome.innerText = "مرحباً " + (res.employeeName || "");
+      document.getElementById("welcome").innerText =
+        "مرحباً " + (res.employeeName || "");
     } else {
       loginStatus.innerText = "❌ " + res.message;
     }
@@ -80,19 +84,22 @@ function login() {
 /* ================= ATTENDANCE ================= */
 function startAttendance() {
   const user = localStorage.getItem("username");
+  const statusEl = document.getElementById("status");
 
   if (!user) {
     alert("انتهت الجلسة، أعد تسجيل الدخول");
-    location.reload();
     return;
   }
 
-  status.innerText = "📍 جاري تحديد الموقع...";
+  // تأكيد إظهار الرسالة
+  statusEl.style.display = "block";
+  statusEl.style.color = "black";
+  statusEl.innerText = "📍 جاري تحديد الموقع...";
 
   navigator.geolocation.getCurrentPosition(
     // ===== SUCCESS =====
     pos => {
-      status.innerText = "⏳ جاري التسجيل...";
+      statusEl.innerText = "⏳ جاري التسجيل...";
 
       fetch(SCRIPT_URL, {
         method: "POST",
@@ -109,20 +116,26 @@ function startAttendance() {
       .then(r => r.json())
       .then(res => {
         if (res.status === "ok") {
-          // ✅ الرسالة المطلوبة
-          status.innerText = "✅ تم التسجيل بنجاح";
+          statusEl.style.color = "green";
+          statusEl.innerText =
+            "✅ تم تسجيل " +
+            document.getElementById("type").value +
+            " بنجاح";
         } else {
-          status.innerText = "❌ " + res.message;
+          statusEl.style.color = "red";
+          statusEl.innerText = "❌ " + res.message;
         }
       })
       .catch(() => {
-        status.innerText = "❌ خطأ في الاتصال بالسيرفر";
+        statusEl.style.color = "red";
+        statusEl.innerText = "❌ خطأ في الاتصال بالسيرفر";
       });
     },
 
     // ===== ERROR =====
-    () => {
-      status.innerText = "❌ فشل تحديد الموقع";
+    err => {
+      statusEl.style.color = "red";
+      statusEl.innerText = "❌ فشل تحديد الموقع";
     },
 
     {
