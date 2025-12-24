@@ -10,44 +10,26 @@
 
 <h2>نظام تسجيل الدوام</h2>
 
-<!-- ===== LOGIN ===== -->
+<!-- LOGIN -->
 <div id="loginBox">
-  <input id="username" placeholder="اسم المستخدم"
-         style="width:90%;padding:12px"><br><br>
-
-  <input id="password" type="password" placeholder="كلمة المرور"
-         style="width:90%;padding:12px"><br><br>
-
-  <button onclick="login()" style="width:90%;padding:15px">
-    تسجيل الدخول
-  </button>
-
+  <input id="username" placeholder="اسم المستخدم" style="width:90%;padding:12px"><br><br>
+  <input id="password" type="password" placeholder="كلمة المرور" style="width:90%;padding:12px"><br><br>
+  <button onclick="login()" style="width:90%;padding:15px">تسجيل الدخول</button>
   <p id="loginStatus"></p>
 </div>
 
-<!-- ===== ATTENDANCE ===== -->
+<!-- ATTENDANCE -->
 <div id="attendanceBox" style="display:none">
-
   <select id="type" style="width:90%;padding:12px">
     <option value="دخول">دخول</option>
     <option value="خروج">خروج</option>
   </select><br><br>
-
-  <button onclick="startAttendance()" style="width:90%;padding:15px">
-    تسجيل البصمة
-  </button>
-
+  <button onclick="startAttendance()" style="width:90%;padding:15px">تسجيل البصمة</button>
   <p id="status"></p>
 </div>
 
 <script>
-/* ===== رابط Google Apps Script ===== */
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfbKpdlA5-AXOTyxpaAhRNfr4m7U6o2KqlM7pbRzBociSuRtvKMnI0OZD2dd_goFkAzg/exec";
-
-/* ===== موقع الدوام ===== */
-const OFFICE_LAT = 36.234905532743525;
-const OFFICE_LNG = 43.99674391239932;
-const ALLOWED_RADIUS = 30000;
+const SCRIPT_URL = "ضع_رابط_الـ_Google_Apps_Script_هنا";
 
 /* ===== Device ID ===== */
 function getDeviceId() {
@@ -59,26 +41,13 @@ function getDeviceId() {
   return id;
 }
 
-/* ===== حساب المسافة ===== */
-function distance(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) *
-    Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 /* ===== LOGIN ===== */
 function login() {
   loginStatus.innerText = "⏳ جاري التحقق...";
 
   fetch(SCRIPT_URL, {
     method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       action: "login",
       username: username.value,
@@ -88,8 +57,6 @@ function login() {
   })
   .then(r => r.json())
   .then(res => {
-    console.log("LOGIN RESPONSE:", res);
-
     if (res.status === "ok") {
       localStorage.setItem("username", res.username);
       loginBox.style.display = "none";
@@ -98,54 +65,27 @@ function login() {
       loginStatus.innerText = "❌ " + res.message;
     }
   })
-  .catch(err => {
-    console.error(err);
-    loginStatus.innerText = "❌ خطأ اتصال";
-  });
+  .catch(() => loginStatus.innerText = "❌ خطأ اتصال");
 }
 
 /* ===== ATTENDANCE ===== */
 function startAttendance() {
-  const user = localStorage.getItem("username");
-
-  if (!user) {
-    alert("انتهت الجلسة، أعد تسجيل الدخول");
-    location.reload();
-    return;
-  }
-
-  status.innerText = "📍 جاري تحديد الموقع...";
+  status.innerText = "📍 طلب تحديد الموقع...";
 
   navigator.geolocation.getCurrentPosition(
-    /* ===== SUCCESS ===== */
     pos => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
       const acc = pos.coords.accuracy;
 
-      console.log("GPS:", lat, lng, acc);
-
-      if (acc > 3000) {
-        status.innerText =
-          "📡 إشارة GPS ضعيفة، انتظر قليلاً وحاول مرة أخرى";
-        return;
-      }
-
-      const d = distance(lat, lng, OFFICE_LAT, OFFICE_LNG);
-
-      if (d > ALLOWED_RADIUS) {
-        status.innerText = "🚨 خارج نطاق الموقع";
-        return;
-      }
-
-      status.innerText = "⏳ جاري الإرسال...";
+      status.innerText = "⏳ إرسال البصمة...";
 
       fetch(SCRIPT_URL, {
         method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "attendance",
-          username: user,
+          username: localStorage.getItem("username"),
           type: type.value,
           lat: lat,
           lng: lng,
@@ -154,35 +94,22 @@ function startAttendance() {
       })
       .then(r => r.json())
       .then(res => {
-        console.log("ATTENDANCE RESPONSE:", res);
         status.innerText =
           res.status === "ok"
             ? "✅ تم تسجيل " + type.value
             : "❌ " + res.message;
       })
-      .catch(err => {
-        console.error(err);
-        status.innerText = "❌ فشل الاتصال بالسيرفر";
-      });
+      .catch(() => status.innerText = "❌ فشل الإرسال");
     },
 
-    /* ===== ERROR ===== */
     err => {
-      console.error("GPS ERROR:", err);
-
-      let msg = "❌ فشل تحديد الموقع";
-      if (err.code === 1) msg = "❌ تم رفض إذن الموقع";
-      if (err.code === 2) msg = "❌ لا يمكن تحديد الموقع";
-      if (err.code === 3) msg = "⏰ انتهى وقت تحديد الموقع";
-
-      status.innerText = msg;
+      status.innerText = "❌ خطأ تحديد الموقع: " + err.message;
     },
 
-    /* ===== OPTIONS ===== */
     {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
+      enableHighAccuracy: false,
+      timeout: 30000,
+      maximumAge: 60000
     }
   );
 }
@@ -190,6 +117,3 @@ function startAttendance() {
 
 </body>
 </html>
-
-
-
