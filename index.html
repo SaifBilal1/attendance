@@ -125,7 +125,7 @@ function startAttendance() {
 
       console.log("GPS:", lat, lng, acc);
 
-      if (acc > 200) {
+      if (acc > 3000) {
         status.innerText =
           "📡 إشارة GPS ضعيفة، انتظر قليلاً وحاول مرة أخرى";
         return;
@@ -190,5 +190,6 @@ function startAttendance() {
 
 </body>
 </html>
+
 
 
