@@ -1,121 +1,24 @@
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نظام تسجيل الدوام</title>
-</head>
-
-<body style="font-family:Arial;text-align:center;padding:20px">
-
-<h2>نظام تسجيل الدوام</h2>
-
-<!-- LOGIN -->
-<div id="loginBox">
-  <input id="username" placeholder="اسم المستخدم" style="width:90%;padding:12px"><br><br>
-  <input id="password" type="password" placeholder="كلمة المرور" style="width:90%;padding:12px"><br><br>
-  <button onclick="login()" style="width:90%;padding:15px">تسجيل الدخول</button>
-  <p id="loginStatus"></p>
-</div>
-
-<!-- ATTENDANCE -->
-<div id="attendanceBox" style="display:none">
-  <select id="type" style="width:90%;padding:12px">
-    <option value="دخول">دخول</option>
-    <option value="خروج">خروج</option>
-  </select><br><br>
-  <button onclick="startAttendance()" style="width:90%;padding:15px">تسجيل البصمة</button>
-  <p id="status"></p>
-</div>
-
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxNW7jF-CK8T2soObJOpQRH2tfmFXwV5ZEjW73g13SSpLAtqmMW2VOmPnBfrk-oCmOSBg/exec";
+function startAttendance() {
+  alert("الزر يعمل ✅");
 
-/* ===== Device ID ===== */
-function getDeviceId() {
-  let id = localStorage.getItem("device_id");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("device_id", id);
-  }
-  return id;
-}
-
-/* ===== LOGIN ===== */
-function login() {
-  loginStatus.innerText = "⏳ جاري التحقق...";
-
-  fetch(SCRIPT_URL, {
+  fetch("https://script.google.com/macros/s/AKfycbwtJe63HoTSQk0URUK1burY96OmbrzW0nIixc9FlBBEIy4iy2IqEMr4f_geDvfaZCasVA/exec", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      action: "login",
-      username: username.value,
-      password: password.value,
-      deviceId: getDeviceId()
+      action: "attendance",
+      username: "test",
+      type: "دخول",
+      lat: 0,
+      lng: 0,
+      accuracy: 0
     })
   })
-  .then(r => r.json())
-  .then(res => {
-    if (res.status === "ok") {
-      localStorage.setItem("username", res.username);
-      loginBox.style.display = "none";
-      attendanceBox.style.display = "block";
-    } else {
-      loginStatus.innerText = "❌ " + res.message;
-    }
+  .then(r => r.text())
+  .then(t => {
+    alert("رد السيرفر:\n" + t);
   })
-  .catch(() => loginStatus.innerText = "❌ خطأ اتصال");
-}
-
-/* ===== ATTENDANCE ===== */
-function startAttendance() {
-  status.innerText = "📍 طلب تحديد الموقع...";
-
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      const acc = pos.coords.accuracy;
-
-      status.innerText = "⏳ إرسال البصمة...";
-
-      fetch(SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "attendance",
-          username: localStorage.getItem("username"),
-          type: type.value,
-          lat: lat,
-          lng: lng,
-          accuracy: acc
-        })
-      })
-      .then(r => r.json())
-      .then(res => {
-        status.innerText =
-          res.status === "ok"
-            ? "✅ تم تسجيل " + type.value
-            : "❌ " + res.message;
-      })
-      .catch(() => status.innerText = "❌ فشل الإرسال");
-    },
-
-    err => {
-      status.innerText = "❌ خطأ تحديد الموقع: " + err.message;
-    },
-
-    {
-      enableHighAccuracy: false,
-      timeout: 30000,
-      maximumAge: 60000
-    }
-  );
+  .catch(e => {
+    alert("خطأ fetch:\n" + e);
+  });
 }
 </script>
-
-</body>
-</html>
-
-
