@@ -3,37 +3,73 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>اختبار تسجيل البصمة</title>
+<title>نظام تسجيل الدوام</title>
 </head>
 
 <body style="font-family:Arial;text-align:center;padding:30px">
 
-<h2>اختبار تسجيل البصمة</h2>
+<h2>نظام تسجيل الدوام</h2>
 
-<button onclick="login()">تسجيل دخول (اختبار)</button>
-<br><br>
+<!-- LOGIN -->
+<div id="loginBox">
+  <input id="username" placeholder="اسم المستخدم" style="width:90%;padding:12px"><br><br>
+  <input id="password" type="password" placeholder="كلمة المرور" style="width:90%;padding:12px"><br><br>
+  <button onclick="login()" style="width:90%;padding:15px">تسجيل الدخول</button>
+  <p id="loginStatus"></p>
+</div>
 
-<select id="type">
-  <option value="دخول">دخول</option>
-  <option value="خروج">خروج</option>
-</select>
-<br><br>
+<!-- ATTENDANCE -->
+<div id="attendanceBox" style="display:none">
+  <select id="type" style="width:90%;padding:12px">
+    <option value="دخول">دخول</option>
+    <option value="خروج">خروج</option>
+  </select><br><br>
 
-<button onclick="sendAttendance()">تسجيل البصمة</button>
+  <button onclick="startAttendance()" style="width:90%;padding:15px">
+    تسجيل البصمة
+  </button>
 
-<pre id="status"></pre>
+  <p id="status"></p>
+</div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk_Fo4Vl5NJGH6ShahLCJlOJvF4ntCxuKPIhUlq2856ATiSCR8LhDmNt_30SkRT_JmPA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyA2qFrPQRpGKdl4YWf7rQMMPmeXTbdHGMiqWuK1kU5faSMz53yVR8dBtq1Fj07jXZjiQ/exec";
 
+/* LOGIN */
 function login() {
-  localStorage.setItem("username", "test");
-  alert("تم تسجيل الدخول (اختبار)");
+  loginStatus.innerText = "⏳ جاري التحقق...";
+
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify({
+      action: "login",
+      username: username.value,
+      password: password.value
+    })
+  })
+  .then(r => r.json())
+  .then(res => {
+    if (res.status === "ok") {
+      localStorage.setItem("username", res.username);
+      loginBox.style.display = "none";
+      attendanceBox.style.display = "block";
+    } else {
+      loginStatus.innerText = "❌ " + res.message;
+    }
+  });
 }
 
-function sendAttendance() {
+/* ATTENDANCE */
+function startAttendance() {
   const user = localStorage.getItem("username");
-  status.innerText = "⏳ جاري الإرسال...";
+  if (!user) {
+    alert("أعد تسجيل الدخول");
+    location.reload();
+    return;
+  }
+
+  status.innerText = "📍 جاري تحديد الموقع...";
 
   navigator.geolocation.getCurrentPosition(
     pos => {
@@ -43,20 +79,22 @@ function sendAttendance() {
         body: JSON.stringify({
           action: "attendance",
           username: user,
-          type: document.getElementById("type").value,
+          type: type.value,
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
         })
       })
-      .then(r => r.text())
-      .then(t => {
-        status.innerText = "رد السيرفر:\n" + t;
-        console.log(t);
+      .then(r => r.json())
+      .then(res => {
+        status.innerText =
+          res.status === "ok"
+            ? "✅ " + res.message
+            : "❌ " + res.message;
       });
     },
     err => {
-      status.innerText = "❌ فشل GPS: " + err.message;
+      status.innerText = "❌ فشل تحديد الموقع";
     }
   );
 }
