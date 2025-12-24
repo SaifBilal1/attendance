@@ -20,6 +20,8 @@
 
 <!-- ATTENDANCE -->
 <div id="attendanceBox" style="display:none">
+  <p id="welcome"></p>
+
   <select id="type" style="width:90%;padding:12px">
     <option value="دخول">دخول</option>
     <option value="خروج">خروج</option>
@@ -33,7 +35,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyA2qFrPQRpGKdl4YWf7rQMMPmeXTbdHGMiqWuK1kU5faSMz53yVR8dBtq1Fj07jXZjiQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9MvTZW-T5umqTLyJIaxqN-wH-x8vGOujby_V-0NSLdVtOc-eGZ5nCU_AmFjemFOGIFQ/exec";
 
 /* LOGIN */
 function login() {
@@ -52,8 +54,12 @@ function login() {
   .then(res => {
     if (res.status === "ok") {
       localStorage.setItem("username", res.username);
+      localStorage.setItem("employeeName", res.employeeName);
+
       loginBox.style.display = "none";
       attendanceBox.style.display = "block";
+
+      welcome.innerText = "✅ تم تسجيل الدخول: " + res.employeeName;
     } else {
       loginStatus.innerText = "❌ " + res.message;
     }
@@ -63,6 +69,7 @@ function login() {
 /* ATTENDANCE */
 function startAttendance() {
   const user = localStorage.getItem("username");
+
   if (!user) {
     alert("أعد تسجيل الدخول");
     location.reload();
@@ -93,7 +100,7 @@ function startAttendance() {
             : "❌ " + res.message;
       });
     },
-    err => {
+    () => {
       status.innerText = "❌ فشل تحديد الموقع";
     }
   );
