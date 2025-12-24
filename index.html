@@ -10,15 +10,23 @@
 
 <h2>نظام تسجيل الدوام</h2>
 
-<!-- LOGIN -->
+<!-- ================= LOGIN ================= -->
 <div id="loginBox">
-  <input id="username" placeholder="اسم المستخدم" style="width:90%;padding:12px"><br><br>
-  <input id="password" type="password" placeholder="كلمة المرور" style="width:90%;padding:12px"><br><br>
-  <button onclick="login()" style="width:90%;padding:15px">تسجيل الدخول</button>
+  <input id="username" placeholder="اسم المستخدم"
+         style="width:90%;padding:12px"><br><br>
+
+  <input id="password" type="password"
+         placeholder="كلمة المرور"
+         style="width:90%;padding:12px"><br><br>
+
+  <button onclick="login()" style="width:90%;padding:15px">
+    تسجيل الدخول
+  </button>
+
   <p id="loginStatus"></p>
 </div>
 
-<!-- ATTENDANCE -->
+<!-- ================= ATTENDANCE ================= -->
 <div id="attendanceBox" style="display:none">
   <p id="welcome"></p>
 
@@ -35,9 +43,10 @@
 </div>
 
 <script>
+/* ===== رابط Google Apps Script ===== */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx9MvTZW-T5umqTLyJIaxqN-wH-x8vGOujby_V-0NSLdVtOc-eGZ5nCU_AmFjemFOGIFQ/exec";
 
-/* LOGIN */
+/* ================= LOGIN ================= */
 function login() {
   loginStatus.innerText = "⏳ جاري التحقق...";
 
@@ -54,24 +63,26 @@ function login() {
   .then(res => {
     if (res.status === "ok") {
       localStorage.setItem("username", res.username);
-      localStorage.setItem("employeeName", res.employeeName);
 
       loginBox.style.display = "none";
       attendanceBox.style.display = "block";
 
-      welcome.innerText = "✅ تم تسجيل الدخول: " + res.employeeName;
+      welcome.innerText = "مرحباً " + (res.employeeName || "");
     } else {
       loginStatus.innerText = "❌ " + res.message;
     }
+  })
+  .catch(() => {
+    loginStatus.innerText = "❌ خطأ في الاتصال";
   });
 }
 
-/* ATTENDANCE */
+/* ================= ATTENDANCE ================= */
 function startAttendance() {
   const user = localStorage.getItem("username");
 
   if (!user) {
-    alert("أعد تسجيل الدخول");
+    alert("انتهت الجلسة، أعد تسجيل الدخول");
     location.reload();
     return;
   }
@@ -79,14 +90,17 @@ function startAttendance() {
   status.innerText = "📍 جاري تحديد الموقع...";
 
   navigator.geolocation.getCurrentPosition(
+    // ===== SUCCESS =====
     pos => {
+      status.innerText = "⏳ جاري التسجيل...";
+
       fetch(SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "attendance",
           username: user,
-          type: type.value,
+          type: document.getElementById("type").value,
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
@@ -94,14 +108,27 @@ function startAttendance() {
       })
       .then(r => r.json())
       .then(res => {
-        status.innerText =
-          res.status === "ok"
-            ? "✅ " + res.message
-            : "❌ " + res.message;
+        if (res.status === "ok") {
+          // ✅ الرسالة المطلوبة
+          status.innerText = "✅ تم التسجيل بنجاح";
+        } else {
+          status.innerText = "❌ " + res.message;
+        }
+      })
+      .catch(() => {
+        status.innerText = "❌ خطأ في الاتصال بالسيرفر";
       });
     },
+
+    // ===== ERROR =====
     () => {
       status.innerText = "❌ فشل تحديد الموقع";
+    },
+
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
     }
   );
 }
