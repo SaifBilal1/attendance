@@ -1,24 +1,66 @@
-<script>
-function startAttendance() {
-  alert("الزر يعمل ✅");
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>اختبار تسجيل البصمة</title>
+</head>
 
-  fetch("https://script.google.com/macros/s/AKfycbwtJe63HoTSQk0URUK1burY96OmbrzW0nIixc9FlBBEIy4iy2IqEMr4f_geDvfaZCasVA/exec", {
-    method: "POST",
-    body: JSON.stringify({
-      action: "attendance",
-      username: "test",
-      type: "دخول",
-      lat: 0,
-      lng: 0,
-      accuracy: 0
-    })
-  })
-  .then(r => r.text())
-  .then(t => {
-    alert("رد السيرفر:\n" + t);
-  })
-  .catch(e => {
-    alert("خطأ fetch:\n" + e);
-  });
+<body style="font-family:Arial;text-align:center;padding:30px">
+
+<h2>اختبار تسجيل البصمة</h2>
+
+<button onclick="login()">تسجيل دخول (اختبار)</button>
+<br><br>
+
+<select id="type">
+  <option value="دخول">دخول</option>
+  <option value="خروج">خروج</option>
+</select>
+<br><br>
+
+<button onclick="sendAttendance()">تسجيل البصمة</button>
+
+<pre id="status"></pre>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxk_Fo4Vl5NJGH6ShahLCJlOJvF4ntCxuKPIhUlq2856ATiSCR8LhDmNt_30SkRT_JmPA/exec";
+
+function login() {
+  localStorage.setItem("username", "test");
+  alert("تم تسجيل الدخول (اختبار)");
+}
+
+function sendAttendance() {
+  const user = localStorage.getItem("username");
+  status.innerText = "⏳ جاري الإرسال...";
+
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "attendance",
+          username: user,
+          type: document.getElementById("type").value,
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy
+        })
+      })
+      .then(r => r.text())
+      .then(t => {
+        status.innerText = "رد السيرفر:\n" + t;
+        console.log(t);
+      });
+    },
+    err => {
+      status.innerText = "❌ فشل GPS: " + err.message;
+    }
+  );
 }
 </script>
+
+</body>
+</html>
